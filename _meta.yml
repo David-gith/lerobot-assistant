@@ -1,0 +1,26 @@
+{
+  "name": "lerobot-assistant",
+  "version": "1.0.0",
+  "description": "LeRobot 机器人学习助手与环境配置工具",
+  "author": "Comate",
+  "created": "2026-05-13",
+  "keywords": [
+    "lerobot", 
+    "robot", 
+    "huggingface", 
+    "机器学习", 
+    "机器人",
+    "teleoperate",
+    "record", 
+    "calibrate"
+  ],
+  "dependencies": {
+    "lerobot": ">=0.5.1",
+    "python": ">=3.12"
+  },
+  "resources": {
+    "github": "https://github.com/huggingface/lerobot",
+    "documentation": "https://huggingface.co/docs/lerobot/main/en/index",
+    "hub": "https://huggingface.co/lerobot"
+  }
+}
