@@ -1,0 +1,109 @@
+---
+name: lerobot-assistant config
+description: LeRobot 助手配置文件，包含版本要求和资源 URL
+version: 1.0.0
+---
+
+# LeRobot Assistant Configuration
+
+## 版本要求
+
+lerobot:
+  stable_version: "0.5.1"
+  min_python_version: "3.12"
+  min_torch_version: "2.10.0"
+  recommended_torch_version: "2.10.0"
+
+## 资源 URL
+
+urls:
+  github: https://github.com/huggingface/lerobot
+  documentation: https://huggingface.co/docs/lerobot/v0.5.1/en/index
+  hub: https://huggingface.co/lerobot
+  discord: https://discord.gg/s3KuuzsPFb
+
+## 支持的机器人
+
+robots:
+  - name: SO-101
+    type: so101_follower
+    teleop_type: so101_leader
+    sdk: feetech
+    config_path: lerobot/configs/robot/so101.yaml
+
+  - name: Koch v1.1
+    type: koch_follower
+    teleop_type: koch_leader
+    sdk: dynamixel
+    config_path: lerobot/configs/robot/koch.yaml
+
+  - name: Aloha
+    type: aloha
+    sdk: aloha
+    config_path: lerobot/configs/robot/aloha.yaml
+
+  - name: Unitree
+    type: unitree
+    sdk: unitree
+    config_path: lerobot/configs/robot/unitree.yaml
+
+## 训练策略类型
+
+policies:
+  - name: ACT
+    type: act
+    description: Action Chunking with Transformers
+
+  - name: SmolVLA
+    type: smolvla
+    description: Small Vision-Language-Action Model
+
+  - name: Pi0
+    type: pi0
+    description: Pi0 base model
+
+  - name: Pi0-FAST
+    type: pi0fast
+    description: Pi0 fast variant
+
+  - name: Pi0.5
+    type: pi05
+    description: Pi0.5 intermediate model
+
+  - name: GR00T N1.5
+    type: gr00t_n1
+    description: NVIDIA GR00T N1.5
+
+  - name: Diffusion
+    type: diffusion
+    description: Diffusion policy
+
+  - name: X-VLA
+    type: xvla
+    description: X-VLA policy
+
+  - name: WALL-OSS
+    type: walloss
+    description: WALL-OSS open source policy
+
+## 环境要求
+
+requirements:
+  system:
+    - Linux (Ubuntu 20.04+)
+    - macOS (Intel/Apple Silicon)
+    - Windows (WSL2 recommended)
+
+  hardware:
+    gpu:
+      min_vram: "8GB"
+      recommended: "16GB+"
+    ram:
+      min: "16GB"
+    disk:
+      min_free_space: "50GB"
+
+  optional:
+    - ffmpeg (Linux, for video encoding)
+    - CUDA (for GPU training)
+    - MPS (macOS Apple Silicon)

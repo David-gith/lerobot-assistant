@@ -1,0 +1,32 @@
+---
+name: lerobot-assistant meta
+description: LeRobot 助手元数据
+version: 1.0.0
+created: 2026-05-13
+author: Comate
+---
+
+# LeRobot Assistant Meta
+
+## Skill 信息
+
+- **名称**: lerobot-assistant
+- **版本**: 1.0.0
+- **创建日期**: 2026-05-13
+- **作者**: Comate
+
+## 依赖资源
+
+- GitHub: https://github.com/huggingface/lerobot
+- 文档: https://huggingface.co/docs/lerobot/main/en/index
+- Hub: https://huggingface.co/lerobot
+
+## 更新日志
+
+### 1.0.0 (2026-05-13)
+- 初始版本
+- 支持安装引导
+- 支持硬件连接与校准
+- 支持数据集录制与上传
+- 支持策略训练与评估
+- 支持仿真环境配置
