@@ -1,5 +1,5 @@
 name: lerobot-assistant
-version: 1.1.0
+version: 0.1.0
 description: LeRobot assistant configuration for diagnostics, references, and robot templates.
 
 lerobot:

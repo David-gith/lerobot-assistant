@@ -1,211 +1,108 @@
-# LeRobot Assistant Skill
+# lerobot-assistant Skill
 
-![LeRobot Assistant Skill](assets/hero-lab-workflow.png)
+`lerobot-assistant` 是一个面向 Hugging Face LeRobot v0.5.1 的本地 Skill，用于辅助 AI 助手完成机器人学习环境检查、安装引导、SO-101/S101 配置、仿真到真机流程说明、知识库检索与常见故障排查。
 
-[中文说明](README-ch.md)
+本 Skill 不会自动修改系统环境。涉及安装依赖、`sudo`、硬件访问、Hugging Face Hub 上传等操作时，应先向用户确认。
 
-`lerobot-assistant` is an Agent Skill for LeRobot robotics workflows. It helps an AI agent diagnose local environments, retrieve LeRobot v0.5.1 knowledge, guide SO-101/S101 setup, and produce safer step-by-step commands for installation, teleoperation, dataset recording, training, and troubleshooting.
+## 能力范围
 
-The repository is structured like a self-contained skill folder: the root contains `SKILL.md`, with scripts, templates, tests, and references bundled next to it.
+| 能力 | 说明 |
+| --- | --- |
+| 环境检测 | 检查 Python、conda/mamba、Git、LeRobot、PyTorch、GPU、ffmpeg、USB 串口和 Hugging Face CLI |
+| 知识库检索 | 基于本地 `references/knowledge/` 中的 58 篇 LeRobot 相关知识文档回答问题 |
+| SO-101/S101 引导 | 提供连接、校准、遥操作、数据采集与配置模板说明 |
+| 策略与数据集 | 覆盖 ACT、SmolVLA、Pi0、LeRobotDataset、Hub、本地数据集处理等常见流程 |
+| 仿真流程 | 提供 PushT、Aloha、LIBERO、Meta-World、LeIsaac/IsaacLab 等仿真优先验证指引 |
+| 故障排查 | 针对安装、CUDA/PyTorch、ffmpeg、USB、摄像头、Hub 上传等问题给出诊断路径 |
 
-## What It Does
+## 安装方式
 
-- Detects Python, conda/mamba, Git, LeRobot, PyTorch, GPU, ffmpeg, USB serial devices, and Hugging Face CLI readiness.
-- Routes LeRobot questions to a local 58-file knowledge base derived from the Hugging Face LeRobot v0.5.1 docs.
-- Provides a renderable SO-101/S101 configuration template.
-- Gives safety-aware guidance for hardware, `sudo`, package installs, Hub uploads, firmware, and long-running training.
-- Includes pytest and shell tests so the skill can be validated before publishing or installing.
+将 `install_skill.sh` 与 `lerobot_assistant_skill.tar.gz` 放在目标项目根目录，然后执行：
 
-## Skill Layout
+```bash
+bash install_skill.sh
+```
+
+默认安装路径：
 
 ```text
-lerobot-assistant/
-├── SKILL.md                    # Required skill entry point
-├── README.md
-├── README-ch.md
-├── LICENSE
-├── SECURITY.md
-├── THIRD_PARTY_NOTICES.md
-├── config.yaml                 # Version, URL, install profile, robot metadata
-├── pyproject.toml              # pytest config
-├── requirements-dev.txt
-├── assets/                     # README illustrations
-├── scripts/
-│   ├── env_check.sh            # Human/JSON environment diagnostics
-│   └── render_so101_config.py  # SO-101/S101 template renderer
-├── templates/
-│   └── so101_config.yaml
-├── references/
-│   ├── knowledge_index.md
-│   └── knowledge/              # 58 local knowledge files
-└── tests/
-    ├── test_env_check.py
-    ├── test_project_metadata.py
-    ├── test_so101_template.py
-    └── shell_env_check.sh
+.comate/skills/lerobot-assistant/
 ```
 
-## Install As A Skill
+如果已经存在旧版本，安装脚本会先备份旧目录，再解压新版本。
 
-For Claude or other Agent Skills-compatible clients, install or upload this repository folder as a custom skill. The required entry point is:
+## 触发方式
+
+### 命令触发
 
 ```text
-SKILL.md
+/lerobot-env
+/lerobot-env check
+/lerobot-env diagnose
 ```
 
-The skill itself does not require a dedicated Python environment to be loaded. Python is only needed when running bundled diagnostics, tests, or real LeRobot commands.
+### 自然语言触发
 
-## LeRobot Runtime Environment
+包含以下主题时可触发本 Skill：
 
-For real LeRobot usage, use a clean Python 3.12 environment:
-
-```bash
-conda create -n lerobot python=3.12 -y
-conda activate lerobot
-pip install "lerobot[all]==0.5.1"
+```text
+LeRobot、lerobot、SO-101、S101、SO101、teleoperate、calibrate、record、dataset、
+ACT、SmolVLA、PushT、Aloha、LIBERO、Meta-World、PyTorch、CUDA、ffmpeg、
+robot imitation learning、Hugging Face robotics
 ```
 
-For source development:
+## 常用入口
+
+环境检测：
 
 ```bash
-git clone https://github.com/huggingface/lerobot.git
-cd lerobot
-pip install -e ".[all]"
+bash .comate/skills/lerobot-assistant/scripts/env_check.sh
+bash .comate/skills/lerobot-assistant/scripts/env_check.sh --json
 ```
 
-## Environment Diagnostics
+生成 SO-101/S101 配置：
 
 ```bash
-bash scripts/env_check.sh
-bash scripts/env_check.sh --json
-```
-
-Exit status:
-
-- `0`: all checks passed.
-- `1`: warnings exist, but lightweight workflows may continue.
-- `2`: required issue exists, usually Python missing or below 3.12.
-
-## SO-101/S101 Template
-
-![SO-101 validation](assets/so101-validation.png)
-
-Render the bundled configuration template:
-
-```bash
-python3 scripts/render_so101_config.py \
+python3 .comate/skills/lerobot-assistant/scripts/render_so101_config.py \
   --robot-id demo_so101 \
   --robot-port /dev/ttyUSB0 \
   --teleop-port /dev/ttyUSB1 \
   --dataset-repo-id USER/so101_dataset
 ```
 
-## Common LeRobot Commands
+详细使用流程见：
 
-```bash
-# Teleoperate SO-101
-lerobot-teleoperate \
-  --robot.type=so101_follower \
-  --robot.port=/dev/ttyUSB0 \
-  --robot.id=my_so101 \
-  --teleop.type=so101_leader \
-  --teleop.port=/dev/ttyUSB1 \
-  --teleop.id=my_so101_leader
-
-# Record a small dataset
-lerobot-record \
-  --robot.type=so101_follower \
-  --robot.port=/dev/ttyUSB0 \
-  --robot.id=my_so101 \
-  --teleop.type=so101_leader \
-  --teleop.port=/dev/ttyUSB1 \
-  --teleop.id=my_so101_leader \
-  --dataset.repo_id=USER/so101_test \
-  --dataset.num_episodes=5
-
-# Train ACT
-lerobot-train \
-  --dataset.repo_id=USER/so101_test \
-  --policy.type=act \
-  --policy.device=cuda
+```text
+USAGE.md
+scripts/install_guide.md
 ```
 
-## Sim-First Evaluation Before Real Robot Tests
+## 文件结构
 
-![Simulation to real workflow](assets/workflow-sim2real.png)
-
-For most robot-learning workflows, evaluate policies in simulation before running them on a real SO-101/S101 arm. This skill includes local references for both LIBERO and Meta-World:
-
-- LIBERO: `references/knowledge/04_模拟/04_LIBERO.md`
-- Meta-World: `references/knowledge/04_模拟/05_MetaWorld.md`
-
-A conservative evaluation loop is:
-
-1. Run `bash scripts/env_check.sh --json` and fix required failures.
-2. Train or load a policy using a dataset compatible with your target robot task.
-3. Validate the policy in LIBERO or Meta-World with short runs first.
-4. Inspect success rate, failure modes, video output, action scale, and observation/action fields.
-5. Only after simulation smoke tests pass, run a short low-speed SO-101/S101 hardware validation.
-6. Keep `push_to_hub` disabled until dataset privacy and repository permissions are confirmed.
-
-Example simulation-oriented commands vary by LeRobot environment and installed benchmark dependencies. Use these as workflow anchors rather than copy-paste guarantees:
-
-```bash
-# Install LeRobot with broad optional dependencies for local experiments.
-pip install "lerobot[all]==0.5.1"
-
-# Read the local benchmark notes before running a benchmark.
-sed -n '1,160p' references/knowledge/04_模拟/04_LIBERO.md
-sed -n '1,160p' references/knowledge/04_模拟/05_MetaWorld.md
-
-# Keep the first evaluation short and inspect logs/videos before hardware tests.
-lerobot-record --help
-lerobot-train --help
+```text
+lerobot-assistant/
+├── README.md
+├── SKILL.md
+├── USAGE.md
+├── _meta.json
+├── config.yaml
+├── references/
+│   ├── knowledge_index.md
+│   └── knowledge/
+├── scripts/
+│   ├── env_check.sh
+│   ├── install_guide.md
+│   └── render_so101_config.py
+└── templates/
+    └── so101_config.yaml
 ```
 
-When moving from simulation to SO-101/S101, verify camera names, action dimensions, normalization statistics, control frequency, joint limits, and emergency stop behavior. Do not run an unvalidated simulation policy directly on hardware.
+## 来源说明
 
-## Test
+本 Skill 的知识内容主要依据：
 
-```bash
-python3 -m pip install -r requirements-dev.txt
-python3 -m pytest
-bash tests/shell_env_check.sh
-```
+- Hugging Face LeRobot 文档：https://huggingface.co/docs/lerobot/index
+- LeRobot v0.5.1 文档页面
+- Hugging Face LeRobot GitHub 仓库：https://github.com/huggingface/lerobot
 
-The tests validate:
-
-- `SKILL.md` references existing bundled assets.
-- Environment JSON output is machine-readable.
-- Knowledge index coverage matches the bundled 58 knowledge files.
-- Every knowledge file has a source marker.
-- SO-101/S101 template rendering works.
-
-## Security
-
-This repository should not contain credentials or private robot configuration. The bundled diagnostics are read-only, and the SO-101/S101 template defaults to `push_to_hub: false`.
-
-Before publishing changes, review [SECURITY.md](SECURITY.md) and run the listed secret/dangerous-command scans.
-
-## Sources
-
-The local knowledge base is based on:
-
-- Hugging Face LeRobot docs index: https://huggingface.co/docs/lerobot/index
-- LeRobot v0.5.1 documentation pages.
-- Hugging Face LeRobot GitHub repository: https://github.com/huggingface/lerobot
-
-This repository is not affiliated with Hugging Face or the LeRobot maintainers.
-
-## Publishing Checklist
-
-Before uploading to GitHub:
-
-```bash
-git status --short
-python3 scripts/security_scan.py
-python3 -m pytest
-bash tests/shell_env_check.sh
-```
-
-Do not commit generated caches such as `__pycache__/` or `.pytest_cache/`.
+本项目不是 Hugging Face 或 LeRobot 官方项目。

@@ -35,7 +35,7 @@ conda create -n lerobot python=3.12 -y
 conda activate lerobot
 ```
 
-For project tests, use any Python that can run `pytest`; the LeRobot runtime should use Python 3.12 and PyTorch compatible with LeRobot v0.5.1/main docs.
+For real LeRobot runtime work, use Python 3.12 and PyTorch compatible with LeRobot v0.5.1/main docs.
 
 ## Intent Routing
 
