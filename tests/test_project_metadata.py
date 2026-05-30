@@ -39,13 +39,13 @@ def test_readme_is_platform_neutral_for_github_release() -> None:
 
 def test_readme_assets_exist() -> None:
     for relative_path in [
-        "assets/hero-lab-workflow.png",
-        "assets/so101-validation.png",
-        "assets/workflow-sim2real.png",
-        "README-ch.md",
-        "README-en.md",
-    ]:
-        assert (ROOT / relative_path).exists()
+            "assets/hero-lab-workflow.png",
+            "assets/so101-validation.png",
+            "assets/workflow-sim2real.png",
+            "README.md",
+            "README-ch.md",
+        ]:
+            assert (ROOT / relative_path).exists()
 
 
 def test_security_scan_script_exists() -> None:
