@@ -72,7 +72,7 @@ pip install -e ".[aloha,pusht]"
 #### 方式 B：从 PyPI 安装（稳定版 v0.5.1）
 
 ```bash
-pip install lerobot==0.5.1
+pip install "lerobot[all]==0.5.1"
 ```
 
 ### 1.5 安装 ffmpeg（Linux 必须）
@@ -235,7 +235,7 @@ lerobot-record \
     --teleop.port=/dev/ttyUSB1 \
     --teleop.id=my_leader \
     --fps 30 \
-    --repo-id ${USER}/my_dataset \
+    --dataset.repo_id ${USER}/my_dataset \
     --episode-time-s 60 \
     --num-episodes 50
 
@@ -248,7 +248,7 @@ lerobot-record \
     --teleop.port=/dev/ttyUSB1 \
     --teleop.id=my_leader \
     --fps 30 \
-    --repo-id ${USER}/my_dataset \
+    --dataset.repo_id ${USER}/my_dataset \
     --dataset.push_to_hub=false
 
 # 恢复中断的录制
@@ -260,7 +260,7 @@ lerobot-record \
     --teleop.port=/dev/ttyUSB1 \
     --teleop.id=my_leader \
     --fps 30 \
-    --repo-id ${USER}/my_dataset \
+    --dataset.repo_id ${USER}/my_dataset \
     --control.resume=true
 ```
 
@@ -312,20 +312,20 @@ print(ds)
 
 ```bash
 # 使用本地数据集训练
-lerobot train \
-    --repo-id ${USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${USER}/my_dataset \
     --policy.type=act \
     --device=cuda  # Linux GPU
 
 # macOS 使用 MPS
-lerobot train \
-    --repo-id ${USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${USER}/my_dataset \
     --policy.type=act \
     --device=mps
 
 # 指定训练参数
-lerobot train \
-    --repo-id ${USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${USER}/my_dataset \
     --policy.type=act \
     --policy.lr=1e-4 \
     --policy.batch_size=8 \
@@ -336,8 +336,8 @@ lerobot train \
 ### 4.2 训练 Diffusion 策略
 
 ```bash
-lerobot train \
-    --repo-id ${USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${USER}/my_dataset \
     --policy.type=diffusion \
     --device=cuda
 ```
@@ -346,15 +346,15 @@ lerobot train \
 
 ```bash
 # 下载并评估预训练模型
-lerobot evaluate \
-    --repo-id lerobot/smolvla_vlabench \
+lerobot-record \
+    --dataset.repo_id lerobot/smolvla_vlabench \
     --device=cuda
 
 # 在自己的数据集上微调
-lerobot train \
-    --repo-id ${USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${USER}/my_dataset \
     --policy.type=act \
-    --checkpoint=lerobot/act_koch_real \
+    --policy.path=lerobot/act_koch_real \
     --device=cuda
 ```
 
@@ -362,9 +362,9 @@ lerobot train \
 
 ```bash
 # 评估本地训练的模型
-lerobot evaluate \
-    --repo-id ${USER}/my_dataset \
-    --checkpoint=outputs/train/act/checkpoints/latest \
+lerobot-record \
+    --dataset.repo_id ${USER}/my_dataset \
+    --policy.path=outputs/train/act/checkpoints/latest \
     --device=cuda
 
 # 可视化评估结果
@@ -422,7 +422,7 @@ python lerobot/examples/pusht_env.py --use_camera=False
 | 问题 | 解决方案 |
 |------|----------|
 | CUDA out of memory | 减小 batch_size 或使用更小的模型 |
-| PyTorch 版本不兼容 | 升级 PyTorch：`pip install torch>=2.10` |
+| PyTorch 版本不兼容 | 升级 PyTorch：`pip install "torch>=2.10"` |
 | GPU 不可用 | 检查 nvidia-smi；macOS 使用 MPS |
 
 ### 6.3 USB 端口问题
@@ -495,7 +495,7 @@ lerobot-record --help
 #   --episode-time-s      Episode 时长
 #   --reset-time-s        重置时间
 #   --num-episodes        Episode 数量
-#   --repo-id             数据集 ID (格式: USER/dataset_name)
+#   --dataset.repo_id             数据集 ID (格式: USER/dataset_name)
 #   --dataset.push_to_hub 是否上传到 Hub
 ```
 
@@ -505,7 +505,7 @@ lerobot-record --help
 lerobot-train --help
 
 # 必需参数:
-#   --repo-id             数据集 ID
+#   --dataset.repo_id             数据集 ID
 
 # 可选参数:
 #   --policy.type         策略类型 (act, diffusion, ...)

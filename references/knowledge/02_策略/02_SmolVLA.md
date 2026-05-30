@@ -33,16 +33,16 @@ SmolVLA (Small Vision-Language-Action Model) 是一种轻量级的视觉语言�
 ### 评估预训练模型
 
 ```bash
-lerobot evaluate \
-    --repo-id lerobot/smolvla_vlabench \
+lerobot-record \
+    --dataset.repo_id lerobot/smolvla_vlabench \
     --device=cuda
 ```
 
 ### 使用语言指令
 
 ```bash
-lerobot evaluate \
-    --repo-id lerobot/smolvla_vlabench \
+lerobot-record \
+    --dataset.repo_id lerobot/smolvla_vlabench \
     --task="Pick up the red block and place it in the blue box" \
     --device=cuda
 ```
@@ -54,8 +54,8 @@ lerobot evaluate \
 ### 基本训练
 
 ```bash
-lerobot train \
-    --repo-id ${HF_USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${HF_USER}/my_dataset \
     --policy.type=smolvla \
     --device=cuda
 ```
@@ -63,8 +63,8 @@ lerobot train \
 ### 自定义配置
 
 ```bash
-lerobot train \
-    --repo-id ${HF_USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${HF_USER}/my_dataset \
     --policy.type=smolvla \
     --policy.vision_encoder=vit_b \
     --policy.lr=1e-4 \
@@ -126,10 +126,10 @@ with torch.no_grad():
 ### 在自定义数据集上微调
 
 ```bash
-lerobot train \
-    --repo-id ${HF_USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${HF_USER}/my_dataset \
     --policy.type=smolvla \
-    --checkpoint=lerobot/smolvla_vlabench \
+    --policy.path=lerobot/smolvla_vlabench \
     --policy.lr=1e-5 \         # 较低学习率
     --policy.total_epochs=50 \
     --device=cuda

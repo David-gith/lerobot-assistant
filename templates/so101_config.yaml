@@ -1,0 +1,63 @@
+# SO-101/S101 LeRobot configuration template.
+# Render with scripts/render_so101_config.py or copy and edit directly.
+
+robot:
+  type: "so101_follower"
+  id: "{{robot_id}}"
+  port: "{{robot_port}}"
+  cameras:
+    front:
+      type: "opencv"
+      index_or_path: "{{camera_index}}"
+      width: {{camera_width}}
+      height: {{camera_height}}
+      fps: {{camera_fps}}
+
+teleop:
+  type: "so101_leader"
+  id: "{{teleop_id}}"
+  port: "{{teleop_port}}"
+
+dataset:
+  repo_id: "{{dataset_repo_id}}"
+  fps: {{dataset_fps}}
+  warmup_time_s: {{warmup_time_s}}
+  episode_time_s: {{episode_time_s}}
+  reset_time_s: {{reset_time_s}}
+  num_episodes: {{num_episodes}}
+  push_to_hub: {{push_to_hub}}
+
+commands:
+  install:
+    - "pip install \"lerobot[all]==0.5.1\""
+    - "pip install \"lerobot[feetech]==0.5.1\""
+  calibrate_follower: >-
+    lerobot-calibrate --robot.type=so101_follower
+    --robot.port={{robot_port}}
+    --robot.id={{robot_id}}
+  calibrate_leader: >-
+    lerobot-calibrate --teleop.type=so101_leader
+    --teleop.port={{teleop_port}}
+    --teleop.id={{teleop_id}}
+  teleoperate: >-
+    lerobot-teleoperate --robot.type=so101_follower
+    --robot.port={{robot_port}}
+    --robot.id={{robot_id}}
+    --teleop.type=so101_leader
+    --teleop.port={{teleop_port}}
+    --teleop.id={{teleop_id}}
+    --display_data=true
+  record: >-
+    lerobot-record --robot.type=so101_follower
+    --robot.port={{robot_port}}
+    --robot.id={{robot_id}}
+    --teleop.type=so101_leader
+    --teleop.port={{teleop_port}}
+    --teleop.id={{teleop_id}}
+    --fps {{dataset_fps}}
+    --dataset.repo_id={{dataset_repo_id}}
+    --warmup-time-s {{warmup_time_s}}
+    --episode-time-s {{episode_time_s}}
+    --reset-time-s {{reset_time_s}}
+    --num-episodes {{num_episodes}}
+    --dataset.push_to_hub={{push_to_hub}}

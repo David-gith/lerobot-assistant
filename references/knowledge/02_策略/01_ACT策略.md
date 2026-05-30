@@ -24,8 +24,8 @@ ACT (Action Chunking with Transformers) 是一种基于 Transformer 的模仿学
 ### 训练 ACT
 
 ```bash
-lerobot train \
-    --repo-id ${HF_USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${HF_USER}/my_dataset \
     --policy.type=act \
     --device=cuda
 ```
@@ -33,9 +33,9 @@ lerobot train \
 ### 评估 ACT
 
 ```bash
-lerobot evaluate \
-    --repo-id ${HF_USER}/my_dataset \
-    --checkpoint=outputs/train/act/checkpoints/latest \
+lerobot-record \
+    --dataset.repo_id ${HF_USER}/my_dataset \
+    --policy.path=outputs/train/act/checkpoints/latest \
     --device=cuda
 ```
 
@@ -83,8 +83,8 @@ config = PolicyConfig(
 ### 常用参数
 
 ```bash
-lerobot train \
-    --repo-id ${HF_USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${HF_USER}/my_dataset \
     --policy.type=act \
     --policy.lr=1e-4 \           # 学习率
     --policy.batch_size=8 \     # 批大小
@@ -120,10 +120,10 @@ lerobot train \
 ### 微调
 
 ```bash
-lerobot train \
-    --repo-id ${HF_USER}/my_dataset \
+lerobot-train \
+    --dataset.repo_id ${HF_USER}/my_dataset \
     --policy.type=act \
-    --checkpoint=lerobot/act_koch_real \
+    --policy.path=lerobot/act_koch_real \
     --device=cuda
 ```
 

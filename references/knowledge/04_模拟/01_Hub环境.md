@@ -41,7 +41,7 @@ for step in range(100):
 ### 命令行评估
 
 ```bash
-lerobot evaluate \
+lerobot-record \
     --env.type=pusht \
     --env.dataset=lerobot/pusht \
     --policy.type=act \
@@ -94,7 +94,7 @@ print(aloha)
 ### 在仿真中训练
 
 ```bash
-lerobot train \
+lerobot-train \
     --env.type=pusht \
     --env.dataset=lerobot/pusht \
     --policy.type=act \
@@ -104,11 +104,11 @@ lerobot train \
 ### 在仿真中评估
 
 ```bash
-lerobot evaluate \
+lerobot-record \
     --env.type=pusht \
     --env.dataset=lerobot/pusht \
     --policy.type=act \
-    --checkpoint=outputs/train/act/checkpoints/latest \
+    --policy.path=outputs/train/act/checkpoints/latest \
     --device=cuda
 ```
 

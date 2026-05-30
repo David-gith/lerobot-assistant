@@ -199,9 +199,11 @@ for sample in dataset[0]:
 
 ```bash
 lerobot-record \
-    --repo-id ${HF_USER}/my_dataset \
-    --dataset.push_to_hub=true
+    --dataset.repo_id ${HF_USER}/my_dataset \
+    --dataset.push_to_hub=false
 ```
+
+确认数据集内容、隐私和 Hub 权限后，再显式改为 `true` 上传。
 
 ### 手动上传
 

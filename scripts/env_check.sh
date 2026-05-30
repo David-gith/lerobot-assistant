@@ -1,349 +1,323 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# LeRobot 环境检测脚本
-# 用法: bash env_check.sh [--json]
+# LeRobot environment checker
+# Usage: bash scripts/env_check.sh [--json]
 #
 
 set +e
 
-# 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# 输出格式
 JSON_OUTPUT=false
-if [ "$1" == "--json" ]; then
+if [ "${1:-}" = "--json" ]; then
     JSON_OUTPUT=true
 fi
 
-# 检测结果
-declare -A CHECKS
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
 OVERALL_STATUS=0
+RESULT_KEYS=()
+declare -A STATUS_BY_KEY
+declare -A LABEL_BY_KEY
+declare -A MESSAGE_BY_KEY
+declare -A REQUIRED_BY_KEY
 
-check() {
-    local name="$1"
-    local command="$2"
-    local required="${3:-false}"
-
-    if eval "$command" > /dev/null 2>&1; then
-        CHECKS["$name"]="pass"
-        if [ "$required" == "true" ]; then
-            :
-        fi
-    else
-        if [ "$required" == "true" ]; then
-            CHECKS["$name"]="fail"
-            OVERALL_STATUS=2
-        else
-            CHECKS["$name"]="warn"
-            if [ $OVERALL_STATUS -lt 2 ]; then
-                OVERALL_STATUS=1
-            fi
-        fi
-    fi
+json_escape() {
+    local value="${1:-}"
+    value=${value//\\/\\\\}
+    value=${value//\"/\\\"}
+    value=${value//$'\n'/\\n}
+    value=${value//$'\r'/}
+    printf '%s' "$value"
 }
 
-echo_header() {
-    local text="$1"
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        return
-    fi
-    echo ""
-    echo -e "${YELLOW}========================================${NC}"
-    echo -e "${YELLOW}  $text${NC}"
-    echo -e "${YELLOW}========================================${NC}"
-}
+record_result() {
+    local key="$1"
+    local label="$2"
+    local status="$3"
+    local message="$4"
+    local required="${5:-false}"
 
-print_result() {
-    local check_name="$1"
-    local status="$2"
-    local message="$3"
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        return
-    fi
+    RESULT_KEYS+=("$key")
+    STATUS_BY_KEY["$key"]="$status"
+    LABEL_BY_KEY["$key"]="$label"
+    MESSAGE_BY_KEY["$key"]="$message"
+    REQUIRED_BY_KEY["$key"]="$required"
 
     case "$status" in
-        pass)
-            echo -e "  ✅ $check_name: ${GREEN}$message${NC}"
+        fail)
+            OVERALL_STATUS=2
             ;;
         warn)
-            echo -e "  ⚠️  $check_name: ${YELLOW}$message${NC}"
-            ;;
-        fail)
-            echo -e "  ❌ $check_name: ${RED}$message${NC}"
+            if [ "$OVERALL_STATUS" -lt 2 ]; then
+                OVERALL_STATUS=1
+            fi
             ;;
     esac
 }
 
-# 主检测逻辑
-main() {
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "{"
-        echo "  \"checks\": {"
+python_bin() {
+    if command -v python >/dev/null 2>&1; then
+        command -v python
+    elif command -v python3 >/dev/null 2>&1; then
+        command -v python3
     else
-        echo_header "LeRobot 环境检测"
+        return 1
     fi
+}
 
-    local first=true
-    local all_checks=""
+version_at_least() {
+    local version="$1"
+    local minimum="$2"
+    local py
+    py="$(python_bin)" || return 1
+    "$py" - "$version" "$minimum" <<'PY' >/dev/null 2>&1
+import re
+import sys
 
-    # 1. Python 版本检测
-    check_name="Python 版本"
-    if command -v python > /dev/null 2>&1; then
-        python_version=$(python --version 2>&1 | grep -oP '\d+\.\d+')
-        major=$(echo $python_version | cut -d. -f1)
-        minor=$(echo $python_version | cut -d. -f2)
+def parts(value):
+    match = re.match(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", value)
+    if not match:
+        raise SystemExit(1)
+    nums = [int(item or 0) for item in match.groups()]
+    return tuple(nums)
 
-        if [ "$major" -ge 3 ] && [ "$minor" -ge 12 ]; then
-            status="pass"
-            message="Python $python_version (>= 3.12)"
-        else
-            status="fail"
-            message="Python $python_version (需要 >= 3.12)"
-            OVERALL_STATUS=2
-        fi
-    else
-        status="fail"
-        message="未找到 Python"
-        OVERALL_STATUS=2
+raise SystemExit(0 if parts(sys.argv[1]) >= parts(sys.argv[2]) else 1)
+PY
+}
+
+print_header() {
+    if [ "$JSON_OUTPUT" = true ]; then
+        return
     fi
+    printf '\n'
+    printf "${YELLOW}========================================${NC}\n"
+    printf "${YELLOW}  %s${NC}\n" "$1"
+    printf "${YELLOW}========================================${NC}\n"
+}
 
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"python_version\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
+print_human_results() {
+    print_header "LeRobot 环境检测"
 
-    # 2. Conda 检测
-    check_name="Conda/Mamba"
-    if command -v conda > /dev/null 2>&1; then
-        status="pass"
-        message="已安装"
-    elif command -v mamba > /dev/null 2>&1; then
-        status="pass"
-        message="已安装 (mamba)"
-    else
-        status="warn"
-        message="未安装（可选，推荐使用）"
-        [ $OVERALL_STATUS -lt 1 ] && OVERALL_STATUS=1
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"conda\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 3. Git 检测
-    check_name="Git"
-    if command -v git > /dev/null 2>&1; then
-        git_version=$(git --version | grep -oP '\d+\.\d+')
-        status="pass"
-        message="已安装 v$git_version"
-    else
-        status="warn"
-        message="未安装（源码安装需要）"
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"git\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 4. LeRobot 安装检测
-    check_name="LeRobot"
-    if python -c "import lerobot" 2>/dev/null; then
-        version=$(python -c "import lerobot; print(lerobot.__version__)")
-        status="pass"
-        message="已安装 v$version"
-    else
-        status="warn"
-        message="未安装"
-        [ $OVERALL_STATUS -lt 1 ] && OVERALL_STATUS=1
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"lerobot\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 5. PyTorch 检测
-    check_name="PyTorch"
-    if python -c "import torch" 2>/dev/null; then
-        torch_version=$(python -c "import torch; print(torch.__version__)")
-        if python -c "import torch; assert tuple(map(int, torch.__version__.split('.')[:2])) >= (2, 10)" 2>/dev/null; then
-            status="pass"
-            message="v$torch_version"
-        else
-            status="warn"
-            message="v$torch_version (建议 >= 2.10)"
-        fi
-    else
-        status="fail"
-        message="未安装（LeRobot 核心依赖）"
-        [ $OVERALL_STATUS -lt 2 ] && OVERALL_STATUS=2
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"pytorch\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 6. CUDA/GPU 检测
-    check_name="GPU"
-    if command -v nvidia-smi > /dev/null 2>&1; then
-        gpu_name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
-        gpu_memory=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader 2>/dev/null | head -1 | sed 's/ MiB//')
-        gpu_memory_gb=$((gpu_memory / 1024))
-
-        if [ $gpu_memory_gb -ge 8 ]; then
-            status="pass"
-            message="$gpu_name (${gpu_memory_gb}GB)"
-        else
-            status="warn"
-            message="$gpu_name (${gpu_memory_gb}GB, 建议 8GB+)"
-            [ $OVERALL_STATUS -lt 1 ] && OVERALL_STATUS=1
-        fi
-    else
-        # 检查 MPS (macOS)
-        if python -c "import torch; print(torch.backends.mps.is_available())" 2>/dev/null | grep -q "True"; then
-            status="pass"
-            message="Apple MPS 可用 (macOS)"
-        else
-            status="warn"
-            message="未检测到 GPU（训练需要 NVIDIA GPU 或 Apple MPS）"
-            [ $OVERALL_STATUS -lt 1 ] && OVERALL_STATUS=1
-        fi
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"gpu\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 7. ffmpeg 检测
-    check_name="ffmpeg"
-    if command -v ffmpeg > /dev/null 2>&1; then
-        ffmpeg_version=$(ffmpeg -version 2>&1 | grep -oP 'ffmpeg version \K[\d.]+')
-        status="pass"
-        message="v$ffmpeg_version"
-    else
-        status="warn"
-        message="未安装（Linux 录制视频需要）"
-        [ $OVERALL_STATUS -lt 1 ] && OVERALL_STATUS=1
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"ffmpeg\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 8. USB 端口检测（Linux）
-    check_name="USB 设备"
-    if [ "$(uname)" == "Linux" ]; then
-        if ls /dev/ttyUSB* > /dev/null 2>&1 || ls /dev/ttyACM* > /dev/null 2>&1; then
-            status="pass"
-            message="检测到串口设备"
-        else
-            status="warn"
-            message="未检测到串口设备（连接机器人前不会有）"
-        fi
-    elif [ "$(uname)" == "Darwin" ]; then
-        if ls /dev/tty.usbmodem* > /dev/null 2>&1; then
-            status="pass"
-            message="检测到 USB 调制解调器设备"
-        else
-            status="warn"
-            message="未检测到 USB 设备"
-        fi
-    else
-        status="warn"
-        message="Windows 检测跳过（建议使用 WSL2）"
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"usb\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 9. Hugging Face CLI 检测
-    check_name="HF CLI"
-    if python -c "from huggingface_hub import hf_hub_download" 2>/dev/null; then
-        status="pass"
-        message="已安装"
-    else
-        status="warn"
-        message="未安装（上传数据集需要）"
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"hf_cli\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 10. LeRobot 版本检查
-    check_name="LeRobot 版本"
-    if python -c "import lerobot" 2>/dev/null; then
-        lerobot_version=$(python -c "import lerobot; print(lerobot.__version__)" 2>/dev/null)
-        if [ -n "$lerobot_version" ]; then
-            # 检查是否为稳定版 v0.5.1
-            if [ "$lerobot_version" == "0.5.1" ]; then
-                status="pass"
-                message="v$lerobot_version (稳定版)"
-            elif [[ "$lerobot_version" == *"+"* ]] || [[ "$lerobot_version" == *"git"* ]]; then
-                status="pass"
-                message="v$lerobot_version (开发版/源码)"
-            else
-                status="warn"
-                message="v$lerobot_version (建议升级到 v0.5.1 稳定版)"
-            fi
-        else
-            status="warn"
-            message="无法获取版本信息"
-        fi
-    else
-        status="warn"
-        message="未安装"
-    fi
-
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "    \"lerobot_version\": {\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        print_result "$check_name" "$status" "$message"
-    fi
-
-    # 输出 JSON 结束
-    if [ "$JSON_OUTPUT" == "true" ]; then
-        echo "  },"
-        echo "  \"overall_status\": $OVERALL_STATUS"
-        echo "}"
-    else
-        echo ""
-        echo_header "检测完成"
-        case $OVERALL_STATUS in
-            0)
-                echo -e "${GREEN}✅ 所有检查通过！可以开始使用 LeRobot。${NC}"
+    local key status label message
+    for key in "${RESULT_KEYS[@]}"; do
+        status="${STATUS_BY_KEY[$key]}"
+        label="${LABEL_BY_KEY[$key]}"
+        message="${MESSAGE_BY_KEY[$key]}"
+        case "$status" in
+            pass)
+                printf "  ✅ %s: ${GREEN}%s${NC}\n" "$label" "$message"
                 ;;
-            1)
-                echo -e "${YELLOW}⚠️  存在警告项，但可以继续。${NC}"
+            warn)
+                printf "  ⚠️  %s: ${YELLOW}%s${NC}\n" "$label" "$message"
                 ;;
-            2)
-                echo -e "${RED}❌ 存在必须修复的问题，请先解决后再继续。${NC}"
+            fail)
+                printf "  ❌ %s: ${RED}%s${NC}\n" "$label" "$message"
                 ;;
         esac
+    done
+
+    print_header "检测完成"
+    case "$OVERALL_STATUS" in
+        0)
+            printf "${GREEN}✅ 所有检查通过！可以开始使用 LeRobot。${NC}\n"
+            ;;
+        1)
+            printf "${YELLOW}⚠️  存在警告项，但可以继续。${NC}\n"
+            ;;
+        2)
+            printf "${RED}❌ 存在必须修复的问题，请先解决后再继续。${NC}\n"
+            ;;
+    esac
+}
+
+print_json_results() {
+    local key status label message required comma
+
+    printf '{\n'
+    printf '  "checks": {\n'
+    comma=""
+    for key in "${RESULT_KEYS[@]}"; do
+        status="${STATUS_BY_KEY[$key]}"
+        label="${LABEL_BY_KEY[$key]}"
+        message="${MESSAGE_BY_KEY[$key]}"
+        required="${REQUIRED_BY_KEY[$key]}"
+        printf '%s    "%s": {"label": "%s", "status": "%s", "required": %s, "message": "%s"}' \
+            "$comma" \
+            "$(json_escape "$key")" \
+            "$(json_escape "$label")" \
+            "$(json_escape "$status")" \
+            "$required" \
+            "$(json_escape "$message")"
+        comma=",
+"
+    done
+    printf '\n'
+    printf '  },\n'
+    printf '  "overall_status": %s\n' "$OVERALL_STATUS"
+    printf '}\n'
+}
+
+detect_python() {
+    local py version
+    py="$(python_bin)"
+    if [ -z "$py" ]; then
+        record_result "python" "Python 版本" "fail" "未找到 python 或 python3" "true"
+        return
     fi
 
-    exit $OVERALL_STATUS
+    version="$("$py" -c 'import platform; print(platform.python_version())' 2>/dev/null)"
+    if version_at_least "$version" "3.12"; then
+        record_result "python" "Python 版本" "pass" "$version (>= 3.12)" "true"
+    else
+        record_result "python" "Python 版本" "fail" "$version (需要 >= 3.12)" "true"
+    fi
+}
+
+detect_conda() {
+    if command -v conda >/dev/null 2>&1; then
+        record_result "conda" "Conda/Mamba" "pass" "conda 已安装" "false"
+    elif command -v mamba >/dev/null 2>&1; then
+        record_result "conda" "Conda/Mamba" "pass" "mamba 已安装" "false"
+    else
+        record_result "conda" "Conda/Mamba" "warn" "未安装；推荐使用 miniforge/conda 管理 LeRobot 环境" "false"
+    fi
+}
+
+detect_git() {
+    local version
+    if command -v git >/dev/null 2>&1; then
+        version="$(git --version 2>/dev/null)"
+        record_result "git" "Git" "pass" "$version" "false"
+    else
+        record_result "git" "Git" "warn" "未安装；源码安装需要 git" "false"
+    fi
+}
+
+detect_lerobot() {
+    local py version
+    py="$(python_bin)" || {
+        record_result "lerobot" "LeRobot" "warn" "跳过；未找到 Python" "false"
+        return
+    }
+
+    if "$py" -c "import lerobot" >/dev/null 2>&1; then
+        version="$("$py" -c 'import lerobot; print(getattr(lerobot, "__version__", "unknown"))' 2>/dev/null)"
+        record_result "lerobot" "LeRobot" "pass" "已安装 v$version" "false"
+    else
+        record_result "lerobot" "LeRobot" "warn" "未安装" "false"
+    fi
+}
+
+detect_pytorch() {
+    local py version
+    py="$(python_bin)" || {
+        record_result "pytorch" "PyTorch" "warn" "跳过；未找到 Python" "false"
+        return
+    }
+
+    if "$py" -c "import torch" >/dev/null 2>&1; then
+        version="$("$py" -c 'import torch; print(torch.__version__)' 2>/dev/null)"
+        if version_at_least "$version" "2.10.0"; then
+            record_result "pytorch" "PyTorch" "pass" "v$version" "false"
+        else
+            record_result "pytorch" "PyTorch" "warn" "v$version；LeRobot v0.5.1 建议 >= 2.10" "false"
+        fi
+    else
+        record_result "pytorch" "PyTorch" "warn" "未安装；安装 LeRobot 时通常会带入核心依赖" "false"
+    fi
+}
+
+detect_gpu() {
+    local gpu_name gpu_memory gpu_memory_gb mps_available py
+
+    if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+        gpu_name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n 1)"
+        gpu_memory="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -n 1)"
+        if [[ "$gpu_memory" =~ ^[0-9]+$ ]]; then
+            gpu_memory_gb=$((gpu_memory / 1024))
+            if [ "$gpu_memory_gb" -ge 8 ]; then
+                record_result "gpu" "GPU" "pass" "$gpu_name (${gpu_memory_gb}GB)" "false"
+            else
+                record_result "gpu" "GPU" "warn" "$gpu_name (${gpu_memory_gb}GB；训练建议 8GB+)" "false"
+            fi
+        else
+            record_result "gpu" "GPU" "warn" "$gpu_name；无法读取显存信息" "false"
+        fi
+        return
+    fi
+
+    py="$(python_bin)"
+    if [ -n "$py" ]; then
+        mps_available="$("$py" -c 'import torch; print(torch.backends.mps.is_available())' 2>/dev/null)"
+        if [ "$mps_available" = "True" ]; then
+            record_result "gpu" "GPU" "pass" "Apple MPS 可用" "false"
+            return
+        fi
+    fi
+
+    record_result "gpu" "GPU" "warn" "未检测到可用 NVIDIA GPU 或 Apple MPS；CPU 可用于轻量测试" "false"
+}
+
+detect_ffmpeg() {
+    local version
+    if command -v ffmpeg >/dev/null 2>&1; then
+        version="$(ffmpeg -version 2>/dev/null | head -n 1)"
+        record_result "ffmpeg" "ffmpeg" "pass" "$version" "false"
+    else
+        record_result "ffmpeg" "ffmpeg" "warn" "未安装；视频解码/录制工作流通常需要 ffmpeg 或 PyAV fallback" "false"
+    fi
+}
+
+detect_usb() {
+    case "$(uname -s)" in
+        Linux)
+            if compgen -G "/dev/ttyUSB*" >/dev/null || compgen -G "/dev/ttyACM*" >/dev/null; then
+                record_result "usb" "USB 串口" "pass" "检测到串口设备" "false"
+            else
+                record_result "usb" "USB 串口" "warn" "未检测到串口设备；未连接机器人时正常" "false"
+            fi
+            ;;
+        Darwin)
+            if compgen -G "/dev/tty.usb*" >/dev/null; then
+                record_result "usb" "USB 串口" "pass" "检测到 USB 串口设备" "false"
+            else
+                record_result "usb" "USB 串口" "warn" "未检测到 USB 串口设备；未连接机器人时正常" "false"
+            fi
+            ;;
+        *)
+            record_result "usb" "USB 串口" "warn" "当前系统未做串口自动检测；Windows 建议使用 WSL2" "false"
+            ;;
+    esac
+}
+
+detect_hf_cli() {
+    if command -v huggingface-cli >/dev/null 2>&1; then
+        record_result "hf_cli" "Hugging Face CLI" "pass" "huggingface-cli 已安装" "false"
+    else
+        record_result "hf_cli" "Hugging Face CLI" "warn" "未检测到 huggingface-cli；上传数据集前需安装/登录" "false"
+    fi
+}
+
+main() {
+    detect_python
+    detect_conda
+    detect_git
+    detect_lerobot
+    detect_pytorch
+    detect_gpu
+    detect_ffmpeg
+    detect_usb
+    detect_hf_cli
+
+    if [ "$JSON_OUTPUT" = true ]; then
+        print_json_results
+    else
+        print_human_results
+    fi
+
+    exit "$OVERALL_STATUS"
 }
 
 main
